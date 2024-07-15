@@ -1,0 +1,17 @@
+[package]
+name = "CalculatorAPI"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sea-orm = { version = "0.12.15", features = ["sqlx-mysql", "runtime-tokio", "macros"] }
+tokio = { version = "1.38.0", features = ["full"] }
+tonic = "0.12.0"
+prost = "0.13.1"
+
+sqlx-mysql = "0.7.4"
+[dependencies.sqlx]
+version = "0.7.4"
+features = ["runtime-tokio", "mysql"]
+[build-dependencies]
+tonic-build = { version = "0.12.0" }

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pow;
+
+service Pow {
+  rpc Powerfn (PowRequest) returns (PowResponse);
+}
+
+message PowRequest {
+  int32 a = 1;
+  int32 b = 2;
+}
+
+message PowResponse {
+  int32 result = 1;
+}
