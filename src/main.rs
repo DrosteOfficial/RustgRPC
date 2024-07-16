@@ -1,12 +1,12 @@
-use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbErr, ExecResult, Statement};
+mod DBManager;
+mod auth;
+mod Entities;
+mod services;
+
+use sea_orm::{Database, DatabaseConnection, DbErr, ModelTrait};
 use tonic::transport::Server;
 use crate::services::calculator_service::CalculatorService;
 use crate::services::pow_service::PowService;
-
-mod services {
-    pub mod calculator_service;
-    pub mod pow_service;
-}
 
 mod calculator {
     tonic::include_proto!("calculator");
@@ -18,29 +18,26 @@ mod pow {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let db: DatabaseConnection = Database::connect("mysql://drosteofficial:adi.2002@162.55.212.205:3306/testAdrian").await?;
-    create_table_if_not_exists(&db).await?;
-    check_db_connection(&db).await?;
+    // Assuming `Database::connect` returns a `DatabaseConnection` that can be used to create a `DBManager` instance
+    let db_manager = DBManager::DBManager {
+        db: Database::connect("mysql://drosteofficial:adi.2002@162.55.212.205:3306/testAdrian").await?,
+    };
+
+    let user = Entities::user::Model {
+        id: 0,
+        username: "test_username".to_string(),
+        password: "test_password".to_string(),
+        email: "test_email@example.com".to_string(),
+        hashed_password: "hashed_test_password".to_string(),
+    };
 
     let addr = "[::1]:50051".parse()?;
-    let calculator_service = CalculatorService::default();
-    let pow_service = PowService::default();
 
     Server::builder()
-        .add_service(calculator::calculator_server::CalculatorServer::new(calculator_service))
-        .add_service(pow::pow_server::PowServer::new(pow_service))
+        .add_service(calculator::calculator_server::CalculatorServer::new(CalculatorService::default()))
+        .add_service(pow::pow_server::PowServer::new(PowService::default()))
         .serve(addr)
         .await?;
 
     Ok(())
-}
-
-async fn create_table_if_not_exists(db: &DatabaseConnection) -> Result<ExecResult, DbErr> {
-    let raw_sql = "CREATE TABLE IF NOT EXISTS testAdrian (id INT PRIMARY KEY AUTO_INCREMENT, name TEXT NOT NULL)";
-
-    db.execute(Statement::from_string(db.get_database_backend(), raw_sql)).await
-}
-
-async fn check_db_connection(db: &DatabaseConnection) -> Result<(), DbErr> {
-    db.ping().await
 }

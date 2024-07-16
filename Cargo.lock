@@ -6,13 +6,16 @@ version = 3
 name = "CalculatorAPI"
 version = "0.1.0"
 dependencies = [
+ "log",
  "prost",
  "sea-orm",
+ "serde",
  "sqlx",
  "sqlx-mysql",
  "tokio",
  "tonic",
  "tonic-build",
+ "tonic-middleware",
 ]
 
 [[package]]
@@ -634,6 +637,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a44623e20b9681a318efdd71c299b6b222ed6f231972bfe2f224ebad6311f0c1"
 
 [[package]]
+name = "futures-macro"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87750cf4b7a4c0625b1529e4c543c2182106e4dedc60a2a6455e00d212c489ac"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.71",
+]
+
+[[package]]
 name = "futures-sink"
 version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -654,6 +668,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-io",
+ "futures-macro",
  "futures-sink",
  "futures-task",
  "memchr",
@@ -2386,6 +2401,18 @@ dependencies = [
  "prost-build",
  "quote",
  "syn 2.0.71",
+]
+
+[[package]]
+name = "tonic-middleware"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66a6d16489a8c2308cac9740fd67627a07386ca8738ddb15ec98c38e718cb43e"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "tonic",
+ "tower",
 ]
 
 [[package]]

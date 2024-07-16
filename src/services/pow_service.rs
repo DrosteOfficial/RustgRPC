@@ -1,6 +1,7 @@
 use tonic::{Request, Response, Status};
 use crate::pow::pow_server::{Pow, PowServer};
 use crate::pow::{PowRequest, PowResponse};
+use log::{info, error};
 
 #[derive(Debug, Default)]
 pub struct PowService {}
@@ -11,15 +12,18 @@ impl Pow for PowService {
         &self,
         request: Request<PowRequest>,
     ) -> Result<Response<PowResponse>, Status> {
-        println!("Got a request: {:?}", request);
+        info!("Received power function request: {:?}", request);
 
         let input = request.get_ref();
-        let result = input.a.pow(input.b as u32); // Assuming `a` and `b` are non-negative for simplicity
 
-        let response = PowResponse {
-            result,
-        };
+        // Example of input validation
+        if input.b < 0 {
+            error!("Negative exponent received: {}", input.b);
+            return Err(Status::invalid_argument("Exponent must be non-negative"));
+        }
 
-        Ok(Response::new(response))
+        let result = input.a.pow(input.b as u32);
+
+        Ok(Response::new(PowResponse { result }))
     }
 }
