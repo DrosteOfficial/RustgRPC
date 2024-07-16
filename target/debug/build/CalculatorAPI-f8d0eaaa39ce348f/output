@@ -1,4 +1,5 @@
 cargo:rerun-if-changed=proto/calculator.proto
-cargo:rerun-if-changed=proto
 cargo:rerun-if-changed=proto/pow.proto
+cargo:rerun-if-changed=proto/user.proto
+cargo:rerun-if-changed=proto/messages.proto
 cargo:rerun-if-changed=proto

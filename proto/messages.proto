@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package messages;
+
+service Messages {
+    rpc CreateMessage (CreateMessageRequest) returns (MessageResponse);
+    rpc GetMessages (GetMessageRequest) returns (MessageResponse);
+    rpc DeleteMessage (DeleteMessageRequest) returns (MessageResponse);
+}
+
+message CreateMessageRequest {
+    string message = 1;
+    int32 sender = 2;
+    int32 receiver = 3;
+    int64 timestamp = 4; // time of creation
+}
+
+message GetMessageRequest {
+    int32 userId = 1;
+}
+
+message DeleteMessageRequest {
+    int32 messageId = 1;
+}
+
+// Merged MessageResponse definitions
+message MessageResponse {
+    int32 userId = 1;
+    repeated Message messages = 2;
+}
+
+message Message {
+    string message = 1;
+    int32 sender = 2;
+    int32 receiver = 3;
+    int64 timestamp = 4;
+}

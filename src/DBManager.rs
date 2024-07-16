@@ -59,31 +59,31 @@ use log::{Log, logger};
 //         }
 //     }
 // }
-use sea_orm::{DatabaseConnection, DbErr, EntityTrait, entity::prelude::*, ExecResult, ModelTrait, IntoActiveModel};
-use crate::Entities as Ent;
-use crate::Entities::user::Entity;
 
-pub struct DBManager {
-    pub(crate) db: DatabaseConnection,
-}
 
-impl DBManager {
-    pub async fn insert_user(&self, user: &Ent::user::Model) -> Result<(), DbErr> {
-        // Clone the `Model` instance and convert it to an `ActiveModel`
+
+    use sea_orm::{DatabaseConnection, DbErr, EntityTrait, entity::prelude::*, ExecResult, ModelTrait, IntoActiveModel, Database};
+    use super::Entities as Ent;
+    use super::Entities::user::Entity as User;
+    pub async fn insert_user( user: &Ent::user::Model, database_connection: &DatabaseConnection) -> Result<(), DbErr> {
+
         let active_user = user.clone().into_active_model();
 
-        // Use the `insert` method on `ActiveModel` to insert it into the database
-        let result = Entity::insert(active_user).exec(&self.db).await;
+        let result = User::insert(active_user).exec(database_connection).await;
 
-        // Check the result and return accordingly
+
         match result {
-            Ok(_) => Ok(()), // If successful, return Ok(())
-            Err(e) => Err(e), // If there's an error, return it
+            Ok(_) => {
+                Ok((println!("User inserted")))
+
+            },
+            Err(e) => Err(e),
         }
     }
 
-    // Include other methods...
-}
+
+
+
 
 
 

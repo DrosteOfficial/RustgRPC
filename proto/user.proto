@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc UpdateUser (UpdateUserRequest) returns (UserResponse);
+  rpc DeleteUser (DeleteUserRequest) returns (UserResponse);
+  rpc GetUser (GetUserRequest) returns (UserResponse);
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string password = 2;
+  string email = 3;
+}
+
+message UpdateUserRequest {
+  int32 id = 1;
+  string username = 2;
+  string password = 3;
+  GenderType gender = 4; // Changed to use the corrected enum name
+}
+
+message DeleteUserRequest {
+  int32 id = 1;
+}
+
+message GetUserRequest {
+  int32 id = 1;
+}
+
+message UserResponse {
+  int32 id = 1;
+  string username = 2;
+  string email = 3;
+  UserStatus status = 4;
+}
+
+enum UserStatus {
+  ACTIVE = 0;
+  WAITING_FOR_CONFIRMATION = 1;
+  INACTIVE = 2;
+}
+
+enum GenderType {
+  MALE = 0;
+  FEMALE = 1;
+  OTHER = 2;
+}
