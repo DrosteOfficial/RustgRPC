@@ -1,5 +1,5 @@
 use tonic::{Request, Response, Status};
-use crate::pow::pow_server::{Pow, PowServer};
+use crate::pow::pow_server::{Pow};
 use crate::pow::{PowRequest, PowResponse};
 use log::{info, error};
 
@@ -23,7 +23,19 @@ impl Pow for PowService {
         }
 
         let result = input.a.pow(input.b as u32);
-
-        Ok(Response::new(PowResponse { result }))
+        println!("Result: {}", result);
+        match result {
+            0 => {
+                error!("Power function overflowed");
+                return Err(Status::out_of_range("Result overflowed"));
+            }
+            _ => {
+                let response = PowResponse {
+                    result,
+                };
+                info!("Returning power function response: {:?}", response);
+                Ok(Response::new(response))
+            }
+        }
     }
 }

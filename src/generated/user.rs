@@ -2,12 +2,16 @@
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateUserRequest {
-    #[prost(string, tag = "1")]
-    pub username: ::prost::alloc::string::String,
+    #[prost(int32, tag = "1")]
+    pub id: i32,
     #[prost(string, tag = "2")]
-    pub password: ::prost::alloc::string::String,
+    pub username: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
+    pub password: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
     pub email: ::prost::alloc::string::String,
+    #[prost(enumeration = "GenderType", tag = "5")]
+    pub gender: i32,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -18,8 +22,10 @@ pub struct UpdateUserRequest {
     pub username: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
     pub password: ::prost::alloc::string::String,
+    #[prost(string, tag = "4")]
+    pub email: ::prost::alloc::string::String,
     /// Changed to use the corrected enum name
-    #[prost(enumeration = "GenderType", tag = "4")]
+    #[prost(enumeration = "GenderType", tag = "5")]
     pub gender: i32,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
