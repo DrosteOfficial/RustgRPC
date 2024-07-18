@@ -1,5 +1,7 @@
-// mod generated;
 
+mod generated;
+
+use log::{debug, error, log_enabled, info, Level};
 use crate::generated::user::{CreateUserRequest, DeleteUserRequest, GetUserRequest, UpdateUserRequest};
 use crate::generated::user::user_service_client::UserServiceClient;
 use tonic::transport::Channel;
@@ -13,43 +15,42 @@ use crate::generated::pow::PowRequest;
 // #[cfg(feature = "client")]
 
 
-//po zerawniu połączenia z serverem ponowne połącznie tak aby odebrać response z reszty requestów
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    std::env::set_var("RUST_LOG", "info");
+    env_logger::init();
     let channel = Channel::from_static("http://[::1]:5051").connect().await?;
-    let mut calc_client = CalculatorClient::new(channel.clone());
-    let mut pow_client = PowClient::new(channel.clone());
+    let calc_client = CalculatorClient::new(channel.clone());
+    let pow_client = PowClient::new(channel.clone());
     let user_client = UserServiceClient::new(channel.clone());
-    let mut mess_client = MessagesClient::new(channel.clone());
+    let mess_client = MessagesClient::new(channel.clone());
 
     // Calculation requests
     let sum_request = tonic::Request::new(CalculationRequest { a: 5, b: 3 });
     let pow_request = tonic::Request::new(PowRequest { a: 2, b: 10 });
 
-    // User requests
     let create_user_request = tonic::Request::new(CreateUserRequest {
-        id: 2,
-        username: "adrian".to_string(),
-        password: "frost".to_string(),
-        email: "frost@gmail.com".to_string(),
-        gender: 0,
+        id: 0,
+        username: "adrian1".to_string(),
+        password: "frost1".to_string(),
+        email: "frost@gmail.com1".to_string(),
+        gender: 1,
     });
 
     let update_user_request = tonic::Request::new(UpdateUserRequest {
         id: 6,
-        username: "adrian_updated".to_string(),
-        password: "frost_updated".to_string(),
-        email: "frost_updated@gmail.com".to_string(),
+        username: "adrian_updated1".to_string(),
+        password: "frost_updated1".to_string(),
+        email: "frost_updated@gmail.com1".to_string(),
         gender: 1,
     });
 
     let delete_user_request = tonic::Request::new(DeleteUserRequest {
-        id: 8,
+        id: 25,
     });
 
     let get_user_request = tonic::Request::new(GetUserRequest {
-        id: 8,
+        id: 15,
     });
     let get_message_request = tonic::Request::new(GetMessageRequest {
         user_id: 2,
@@ -59,39 +60,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         message: "Hello".to_string(),
         sender: 6,
         receiver: 7,
-        timestamp: 2137,
+        timestamp: 2000000,
     });
-    let delete_message_request = tonic::Request::new((
-        DeleteMessageRequest {
-            message_id: 1,
-        }
-    ));
+    let delete_message_request = tonic::Request::new(DeleteMessageRequest {
+        message_id: 1,
+    });
 
     // Making requests
-    let sum_response = calc_client.add(sum_request).await?.into_inner();
+    if let Err(err) = calc_client.clone().add(sum_request).await {
+        error!("Error adding: {:?}", err);
+    }else { info!("Addition successful");}
 
-    let pow_response = pow_client.powerfn(pow_request).await?.into_inner();
+    if let Err(err) = pow_client.clone().powerfn(pow_request).await {
+        error!("Error with power function: {:?}", err);
+    }else { info!("Power function successful");}
 
-    // let create_user_response = user_client.create_user(create_user_request).await?.into_inner();
-    // let update_user_response = user_client.update_user(update_user_request).await?.into_inner();
-    // let get_user_response = user_client.get_user(get_user_request).await?.into_inner();
-    // let delete_user_response = user_client.delete_user(delete_user_request).await?.into_inner();
+    if let Err(err) = user_client.clone().create_user(create_user_request).await {
+        error!("Error creating user: {:?}", err);
+    }else {
+        info!("User created successfully");
+    }
+    if let Err(err) = user_client.clone().update_user(update_user_request).await {
+        error!("Error updating user: {:?}", err);
+    }else {
+        info!("User updated successfully");
+    }
+    if let Err(err) = user_client.clone().get_user(get_user_request).await {
+        error!("Error getting user: {:?}", err);
+    }
+    else {
+        info!("User retrieved successfully");
+    }
+    if let Err(err) = user_client.clone().delete_user(delete_user_request).await {
+        error!("Error deleting user: {:?}", err);
+    }else {
+        info!("User deleted successfully");
+    }
 
-    let _create_message_response = mess_client.create_message(create_message_request).await?.into_inner();
-    let _get_message_response = mess_client.get_messages(get_message_request).await?.into_inner();
-    let _delete_message_response = mess_client.delete_message(delete_message_request).await?.into_inner();
-
-    // Print responses
-    println!("Sum Response: {:?}", sum_response.result);
-    println!("Pow Response: {:?}", pow_response.result);
-
-    // println!("Create User Response: {:?}", create_user_response.id);
-    // println!("Update User Response: {:?}", update_user_response.id);
-    // println!("Delete User Response: {:?}", delete_user_response.id);
-    // println!("Get User Response: {:?}", get_user_response.id);
-    println!("Create Message Response: {:?}", _create_message_response);
-    print!("Get Message Response: {:?}", _get_message_response);
-    println!("Delete Message Response: {:?}", _delete_message_response);
-
+    if let Err(err) = mess_client.clone().create_message(create_message_request).await {
+        error!("Error creating message: {:?}", err);
+    }else {
+        info!("Message created successfully");
+    }
+    if let Err(err) = mess_client.clone().get_messages(get_message_request).await {
+        error!("Error getting messages: {:?}", err);
+    }else {
+        info!("Messages retrieved successfully");
+    }
+    if let Err(err) = mess_client.clone().delete_message(delete_message_request).await {
+        error!("Error deleting message: {:?}", err);
+    }else {
+        info!("Message deleted successfully");
+    }
     Ok(())
 }

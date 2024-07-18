@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use log::{debug, error, log_enabled, info, Level};
 use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, DbErr, ActiveValue::Set, Database, ActiveValue};
 use tonic::{Request, Response, Status};
 use crate::userProto::{UserResponse, CreateUserRequest};
@@ -9,37 +8,45 @@ use crate::generated::user::{DeleteUserRequest, GetUserRequest, UpdateUserReques
 
 #[derive(Debug, Default)]
 pub struct MyUserService {
-    pub(crate) db: Arc<Mutex<Option<DatabaseConnection>>>,
+    pub(crate) db: DatabaseConnection,
 }
 
+
+#[tonic::async_trait]
+impl UserService for MyUserService {
+    async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserResponse>, Status> {
+        self.create_user(request).await
+    }
+
+    async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserResponse>, Status> {
+        self.update_user(request).await
+    }
+
+    async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<UserResponse>, Status> {
+        self.delete_user(request).await
+    }
+
+    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserResponse>, Status> {
+        self.get_user(request).await
+    }
+}
+
+
+
 impl MyUserService {
-    pub fn new_user_service(db: Arc<Mutex<Option<DatabaseConnection>>>) -> MyUserService {
+    pub fn new_user_service(db: DatabaseConnection) -> MyUserService {
         MyUserService { db }
     }
 
     async fn get_user_service_db_connection(&self) -> Result<DatabaseConnection, Status> {
-        let db_guard = self.db.lock().await;
-        if let Some(ref db_conn) = *db_guard {
-            Ok(db_conn.clone())
-        } else {
-            Err(Status::internal("Database connection is not available"))
-        }
-    }
-
-    async fn reconnect_user_service_db(&self) -> Result<(), Status> {
-        let mut db_guard = self.db.lock().await;
-        match Database::connect("mysql://drosteofficial:adi.2002@162.55.212.205:3306/testAdrian").await {
-            Ok(new_db_conn) => {
-                *db_guard = Some(new_db_conn);
-                Ok(())
-            }
-            Err(e) => Err(Status::internal(format!("Failed to reconnect to database: {}", e))),
-        }
+        Ok(self.db.clone())
     }
 }
 
-#[tonic::async_trait]
-impl UserService for MyUserService {
+
+
+
+impl MyUserService {
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
@@ -47,7 +54,7 @@ impl UserService for MyUserService {
         let req = request.into_inner();
 
         if req.username.is_empty() || req.password.is_empty() || req.email.is_empty() || req.gender < 0 || req.gender > 2 {
-            return Err(Status::invalid_argument("Fields cannot be empty"));
+            return Err(Status::internal("Fields cannot be empty"));
         }
 
         let new_user = userEntity::ActiveModel {
@@ -58,18 +65,11 @@ impl UserService for MyUserService {
             gender: Set(req.gender.into()),
         };
 
-        let db_conn = match self.get_user_service_db_connection().await {
-            Ok(db) => db,
-            Err(_) => {
-                self.reconnect_user_service_db().await?;
-                self.get_user_service_db_connection().await?
-            }
-        };
 
-        let insert_result = userEntity::Entity::insert(new_user.clone()).exec(&db_conn).await;
+        let insert_result = userEntity::Entity::insert(new_user.clone()).exec(&self.db).await;
         match insert_result {
             Ok(result) => {
-                println!("User initializing...");
+                info!("User created");
                 Ok(Response::new(UserResponse {
                     id: result.last_insert_id as i32,
                     username: req.username.clone(),
@@ -80,7 +80,6 @@ impl UserService for MyUserService {
             Err(e) => {
                 println!("Error: {:?}", e);
                 if let DbErr::Conn(_) = e {
-                    self.reconnect_user_service_db().await?;
                     let db_conn = self.get_user_service_db_connection().await?;
                     let insert_result = userEntity::Entity::insert(new_user.clone()).exec(&db_conn).await;
                     match insert_result {
@@ -90,9 +89,13 @@ impl UserService for MyUserService {
                             email: req.email.clone(),
                             status: 1,
                         })),
-                        Err(e) => Err(Status::internal(format!("Failed to create user: {}", e))),
+                        Err(e) => {
+                            error!("Error: {:?}", e);
+                            Err(Status::internal(format!("Failed to create user: {}", e)))
+                        }
                     }
                 } else {
+                    error!("Error: {:?}", e);
                     Err(Status::internal(format!("Failed to create user: {}", e)))
                 }
             }
@@ -103,13 +106,19 @@ impl UserService for MyUserService {
         let req = request.into_inner();
 
         if req.username.is_empty() || req.password.is_empty() || req.email.is_empty() || req.gender < 0 || req.gender > 2 {
+            error!("Fields cannot be empty");
             return Err(Status::invalid_argument("Fields cannot be empty"));
+        }
+
+        let user_check = self.get_user(Request::new(GetUserRequest { id: req.id })).await;
+        if user_check.is_err() {
+            error!("User not found");
+            return Err(Status::not_found("User not found"));
         }
 
         let db_conn = match self.get_user_service_db_connection().await {
             Ok(db) => db,
             Err(_) => {
-                self.reconnect_user_service_db().await?;
                 self.get_user_service_db_connection().await?
             }
         };
@@ -125,7 +134,7 @@ impl UserService for MyUserService {
         let update_result = userEntity::Entity::update(updated_user.clone()).exec(&db_conn).await;
         match update_result {
             Ok(_) => {
-                println!("User updated");
+                info!("User updated");
                 Ok(Response::new(UserResponse {
                     id: req.id,
                     username: req.username.clone(),
@@ -136,7 +145,6 @@ impl UserService for MyUserService {
             Err(e) => {
                 println!("Error: {:?}", e);
                 if let DbErr::Conn(_) = e {
-                    self.reconnect_user_service_db().await?;
                     let db_conn = self.get_user_service_db_connection().await?;
                     let update_result = userEntity::Entity::update(updated_user.clone()).exec(&db_conn).await;
                     match update_result {
@@ -146,7 +154,10 @@ impl UserService for MyUserService {
                             email: req.email.clone(),
                             status: 1,
                         })),
-                        Err(e) => Err(Status::internal(format!("Failed to update user: {}", e))),
+                        Err(e) =>{
+                            error!("Error: {:?}", e);
+                            Err(Status::internal(format!("Failed to update user: {}", e)))
+                        }
                     }
                 } else {
                     Err(Status::internal(format!("Failed to update user: {}", e)))
@@ -161,10 +172,15 @@ impl UserService for MyUserService {
         let db_conn = match self.get_user_service_db_connection().await {
             Ok(db) => db,
             Err(_) => {
-                self.reconnect_user_service_db().await?;
                 self.get_user_service_db_connection().await?
             }
         };
+
+        let user_check = self.get_user(Request::new(GetUserRequest { id: req.id })).await;
+        if user_check.is_err() {
+            error!("User not found");
+            return Err(Status::not_found("User not found"));
+        }
 
         let delete_result = userEntity::Entity::delete_by_id(req.id).exec(&db_conn).await;
         match delete_result {
@@ -184,7 +200,6 @@ impl UserService for MyUserService {
             Err(e) => {
                 println!("Error occurred: {:?}", e);
                 if let DbErr::Conn(_) = e {
-                    self.reconnect_user_service_db().await?;
                     let db_conn = self.get_user_service_db_connection().await?;
                     let delete_result = userEntity::Entity::delete_by_id(req.id).exec(&db_conn).await;
                     match delete_result {
@@ -208,9 +223,9 @@ impl UserService for MyUserService {
         println!("Request: {:?}", req);
         let db_conn = match self.get_user_service_db_connection().await {
             Ok(db) => db,
-            Err(_) => {
-                self.reconnect_user_service_db().await?;
-                self.get_user_service_db_connection().await?
+            Err(e) => {
+                println!("Error: {:?}", e);
+                return Err(Status::internal("Failed to get db connection"));
             }
         };
 
@@ -222,30 +237,13 @@ impl UserService for MyUserService {
                     id: user.id,
                     username: user.username,
                     email: user.email,
-                    status: 1,
+                    status: 0,
                 }))
             }
             Ok(None) => Err(Status::not_found("User not found")),
-            Err(e) => {
-                println!("Error: {:?}", e);
-                if let DbErr::Conn(_) = e {
-                    self.reconnect_user_service_db().await?;
-                    let db_conn = self.get_user_service_db_connection().await?;
-                    let user = userEntity::Entity::find_by_id(req.id).one(&db_conn).await;
-                    match user {
-                        Ok(Some(user)) => Ok(Response::new(UserResponse {
-                            id: user.id,
-                            username: user.username,
-                            email: user.email,
-                            status: 1,
-                        })),
-                        Ok(None) => Err(Status::not_found("User not found")),
-                        Err(e) => Err(Status::internal(format!("Failed to retrieve user: {}", e))),
-                    }
-                } else {
-                    Err(Status::internal(format!("Failed to retrieve user: {}", e)))
-                }
-            }
+            Err(e) => { Err(Status::internal(format!("Failed to get user: {}", e))) }
         }
     }
 }
+
+

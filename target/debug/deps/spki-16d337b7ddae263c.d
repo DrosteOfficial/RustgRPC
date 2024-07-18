@@ -1,0 +1,12 @@
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\libspki-16d337b7ddae263c.rmeta: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\algorithm.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\error.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\spki.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\traits.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\../README.md
+
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\libspki-16d337b7ddae263c.rlib: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\algorithm.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\error.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\spki.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\traits.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\../README.md
+
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\spki-16d337b7ddae263c.d: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\algorithm.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\error.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\spki.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\traits.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\../README.md
+
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\lib.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\algorithm.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\error.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\spki.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\traits.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\spki-0.7.3\src\../README.md:
