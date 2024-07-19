@@ -18,15 +18,24 @@ use crate::services::pow_service::PowService;
 use crate::generated::messages::messages_server::MessagesServer;
 use crate::services::user_service::MyUserService;
 use crate::services::messages_service;
+use crate::services::JWTService;
 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    //init. logger
     std::env::set_var("RUST_LOG", "info");
     env_logger::init();
+
+    // Create database
     println!("Initializing database connection");
     let db_conn: DatabaseConnection = Database::connect("mysql://drosteofficial:adi.2002@162.55.212.205/testAdrian").await?;
 
+    //Initialize JWTService
+    JWTService::JWTService::new(db_conn.clone());
+
+    // Run migrations
     migrations::migrator::Migrator::up(&db_conn, None).await?;
 
 

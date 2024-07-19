@@ -6,12 +6,12 @@ use crate::entities::user;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
+    pub userId: i32,
     pub token: String,
     pub active: bool,
     pub creaitontime:DateTime,
     pub expired: bool,
     pub expirationtime:DateTime,
-    pub timestamp: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter,DeriveRelation)]

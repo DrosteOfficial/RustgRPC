@@ -1,28 +1,40 @@
+
 use env_logger::builder;
 use crate::userProto::SignInResponse;
+use jsonwebtoken::{encode, Header};
 use log::{debug, error, log_enabled, info, Level};
-use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, DbErr, ActiveValue::Set, Database, ActiveValue, QueryFilter, QuerySelect, ColumnTrait, QueryTrait, ConnectionTrait, Related, ModelTrait};
-use tonic::{Request, Response, Status};
+use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, DbErr, ActiveValue::Set, Database, ActiveValue, QuerySelect};
+use tonic::{async_trait, Request, Response, Status};
 use crate::userProto::{UserResponse, CreateUserRequest};
 use crate::userProto::user_service_server::UserService;
 use crate::entities::user as userEntity;
 use crate::entities::user;
 use crate::entities::user::Entity;
 use crate::generated::user::{DeleteUserRequest, GetUserRequest, UpdateUserRequest, Response as UResponse, SignInRequest, SignOutRequest};
+use sea_orm::ColumnTrait;
 use crate::generated::user as genuser;
 use crate::entities::RegularToken;
 use crate::entities::RefreshToken;
-use crate::entities::user::Relation::RefreshToken;
+use crate::services::JWTService;
+use sea_orm::QueryFilter;
+use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Local, Utc};
+use chrono::naive::NaiveDateTime;
+use chrono::NaiveDate;
+use tonic::metadata::MetadataMap;
+use crate::entities::RefreshToken::Column::Token;
+use crate::migrations::migrator::sea_query::ColumnRef::Column;
 
 #[derive(Debug, Default)]
 pub struct MyUserService {
     pub(crate) db: DatabaseConnection,
+    pub(crate)jwt_service: JWTService::JWTService,
 }
 
-
-#[tonic::async_trait]
+#[async_trait]
 impl UserService for MyUserService {
-    async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserResponse>, Status> {
+    async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UResponse>, Status> {
+        JWTService::is_token_valid(&request.metadata(), &Default::default()).await;
         self.create_user(request).await
     }
 
@@ -39,7 +51,7 @@ impl UserService for MyUserService {
     }
 
     async fn sign_in(&self, request: Request<SignInRequest>) -> Result<Response<SignInResponse>, Status> {
-        todo!()
+        self.sign_in(request).await
     }
 
     async fn sign_out(&self, request: Request<SignOutRequest>) -> Result<Response<UResponse>, Status> {
@@ -50,8 +62,9 @@ impl UserService for MyUserService {
 
 
 impl MyUserService {
-    pub fn new_user_service(db: DatabaseConnection) -> MyUserService {
-        MyUserService { db }
+    pub fn new_user_service(db: DatabaseConnection, jwt_service:JWTService::JWTService ) -> MyUserService {
+        MyUserService { db, jwt_service}
+
     }
 
     async fn get_user_service_db_connection(&self) -> Result<DatabaseConnection, Status> {
@@ -60,11 +73,47 @@ impl MyUserService {
 }
 
 
-
-
 impl MyUserService {
-    async fn sign_in(&self, request: Request<SignInRequest>) -> Result<Response<SignInResponse>, Status>{
-    let req = request.into_inner();
+
+
+    async fn sign_out(&self, request: Request<SignOutRequest>, metadata:MetadataMap) -> Result<Response<UResponse>, Status> {
+        let DB = self.get_user_service_db_connection().await?;
+        let _result = RegularToken::Entity::find()
+            .filter(RegularToken::Column::Token.eq(metadata.clone().into_headers().get("authorization").unwrap().to_str().unwrap()))
+            .one(&DB).await;
+        match _result {
+            Ok(Some(token)) => {
+                let _ = RegularToken::Entity::update_many()
+                    .filter(RegularToken::Column::Token.eq(token.token.clone()))
+                    .set(Column::eq(RegularToken::Column::Active.eq(false)))
+                    .set(Column::eq(RegularToken::Column::Expirationtime.eq(Utc::now())))
+                    .exec(&DB).await;
+                match _result.iter().clone() {
+                    Ok(_) => {
+                        Ok(Response::new(UResponse {
+                            status: true,
+                            message: "Successfully signed out".to_string(),
+                        }))
+                    }
+                    Err(e) => {
+                        error!("Error: {:?}", e);
+                        Err(Status::internal(format!("Failed to sign out: {}", e)))
+                    }
+                }
+            }
+            Ok(None) => {
+                Err(Status::not_found("Token not found"))
+            }
+            Err(e) => {
+                error!("Error: {:?}", e);
+                Err(Status::internal(format!("Failed to sign out: {}", e)))
+            }
+        }
+    }
+
+
+    async fn sign_in(&self, request: Request<SignInRequest>) -> Result<Response<SignInResponse>, Status> {
+        let req = request.into_inner();
         if req.password.is_empty() || req.login_or_email.is_empty() {
             return Err(Status::internal("Fields cannot be empty"));
         }
@@ -76,37 +125,61 @@ impl MyUserService {
             }
         };
 
-        let _result =  userEntity::Entity::find()
-            .having(user::Column::Username.eq(req.login_or_email.clone()))
-            .having(user::Column::Password.eq(req.password.clone()))
+        let user_result = userEntity::Entity::find()
+            .filter(user::Column::Username.eq(req.login_or_email.clone()))
+            .filter(user::Column::Password.eq(req.password.clone()))
             .one(&db_conn).await;
 
-        match _result {
+        match user_result {
             Err(e) => {
                 error!("Error: {:?}", e);
                 return Err(Status::internal(format!("Failed to sign in: {}", e)));
-            }
-
+            },
+            Ok(None) => return Err(Status::not_found("User not found")),
             Ok(Some(user)) => {
-                let _result =  user::Entity::find_related(RefreshToken);
+                let token_result = RegularToken::Entity::find()
+                    .filter(RegularToken::Column::Id.eq(user.id))
+                    .filter(RegularToken::Column::Active.eq(true))
+                    .one(&db_conn).await;
+
+                match token_result {
+                    Err(e) => {
+                        let new_jwt = JWTService::generate_jwt(user.clone()).await;
+                        let new_token = RegularToken::ActiveModel {
+                            id: ActiveValue::NotSet,
+                            userId: sea_orm::Set(user.id),
+                            token: Set(new_jwt.clone()),
+                            active: Set(true),
+                            creaitontime: Set(NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0)),
+                            expired: Set(false),
+                            expirationtime: ActiveValue::NotSet
+                        };
+                        RegularToken::Entity::insert(new_token.clone()).exec(&db_conn).await;
+
+                        Ok(Response::new(SignInResponse{
+                            status: true,
+                            message: "Successfully signed in :)".to_string(),
+                            token: new_token.token.unwrap(),
+                        }))
 
 
-
-
-
-
-
-
-
-
-
-       }
+                    },
+                    Ok(None) => return Err(Status::not_found("Token not found")),
+                    Ok(Some(token)) => {
+                        return Ok(Response::new(SignInResponse{
+                            status: true,
+                            message: "Successfully signed in :)".to_string(),
+                            token: token.token,
+                        }));
+                    }
+                }
+            }
+        }
     }
-}
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
-    ) -> Result<Response<UserResponse>, Status> {
+    ) -> Result<Response<UResponse>, Status> {
         let req = request.into_inner();
 
         if req.username.is_empty() || req.password.is_empty() || req.email.is_empty() || req.gender < 0 || req.gender > 2 {
@@ -126,11 +199,9 @@ impl MyUserService {
         match insert_result {
             Ok(result) => {
                 info!("User created");
-                Ok(Response::new(UserResponse {
-                    id: result.last_insert_id as i32,
-                    username: req.username.clone(),
-                    email: req.email.clone(),
-                    status: 1,
+                Ok(Response::new(UResponse {
+                    status: true,
+                    message: "".to_string(),
                 }))
             }
             Err(e) => {
@@ -139,11 +210,9 @@ impl MyUserService {
                     let db_conn = self.get_user_service_db_connection().await?;
                     let insert_result = userEntity::Entity::insert(new_user.clone()).exec(&db_conn).await;
                     match insert_result {
-                        Ok(result) => Ok(Response::new(UserResponse {
-                            id: result.last_insert_id as i32,
-                            username: req.username.clone(),
-                            email: req.email.clone(),
-                            status: 1,
+                        Ok(result) => Ok(Response::new(UResponse {
+                            status: true,
+                            message: "successfully Registered".to_string(),
                         })),
                         Err(e) => {
                             error!("Error: {:?}", e);

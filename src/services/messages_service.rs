@@ -26,6 +26,7 @@ impl MessagesService {
     async fn create_message(&self, request: Request<CreateMessageRequest>) -> Result<Response<MessageResponse>, Status> {
         let db_conn = self.get_db_connection().await?;
         let det = request.into_inner();
+
         let new_message = messageEntity::ActiveModel {
             id: ActiveValue::NotSet,
             message: Set(det.message),
