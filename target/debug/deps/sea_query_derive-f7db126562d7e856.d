@@ -1,0 +1,9 @@
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\sea_query_derive-f7db126562d7e856.dll: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\error.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_attr.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_path.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_variant.rs
+
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\sea_query_derive-f7db126562d7e856.d: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\error.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_attr.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_path.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_variant.rs
+
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\lib.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\error.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_attr.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_path.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-derive-0.4.1\src\iden_variant.rs:

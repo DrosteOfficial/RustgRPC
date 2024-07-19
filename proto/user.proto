@@ -3,10 +3,36 @@ syntax = "proto3";
 package user;
 
 service UserService {
-  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc CreateUser (CreateUserRequest) returns (Response);
   rpc UpdateUser (UpdateUserRequest) returns (UserResponse);
   rpc DeleteUser (DeleteUserRequest) returns (UserResponse);
   rpc GetUser (GetUserRequest) returns (UserResponse);
+  rpc SignIn (SignInRequest) returns (SignInResponse);
+  rpc SignOut (SignOutRequest) returns (Response);
+}
+
+
+message Response {
+  bool status = 1;
+  string message = 2;
+}
+
+message SignInRequest {
+  string login_or_email = 1;
+  string password = 2;
+}
+
+message SignInResponse {
+  bool status = 1;
+  string message = 2;
+  string token = 3;
+}
+
+message SignOutRequest {
+}
+
+message SignOutResponse {
+  bool status = 1;
 }
 
 message CreateUserRequest {
@@ -21,7 +47,7 @@ message UpdateUserRequest {
   int32 id = 1;
   string username = 2;
   string password = 3;
-    string email = 4;
+  string email = 4;
   GenderType gender = 5; // Changed to use the corrected enum name
 }
 

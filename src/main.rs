@@ -4,14 +4,14 @@ mod entities;
 mod services;
 //mod client;
 mod generated;
+mod migrations;
 
-use tokio::sync::Mutex;
-use std::sync::Arc;
+use std::env;
 use generated::calculator;
 use generated::pow;
 use generated::user as userProto;
-
 use sea_orm::{Database, DatabaseConnection};
+use sea_orm_migration::MigratorTrait;
 use tonic::transport::Server;
 use crate::services::calculator_service::CalculatorService;
 use crate::services::pow_service::PowService;
@@ -19,12 +19,15 @@ use crate::generated::messages::messages_server::MessagesServer;
 use crate::services::user_service::MyUserService;
 use crate::services::messages_service;
 
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::set_var("RUST_LOG", "info");
     env_logger::init();
     println!("Initializing database connection");
     let db_conn: DatabaseConnection = Database::connect("mysql://drosteofficial:adi.2002@162.55.212.205/testAdrian").await?;
+
+    migrations::migrator::Migrator::up(&db_conn, None).await?;
 
 
     let addr = "[::1]:5051".parse()?;
@@ -39,4 +42,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server initialized at {}", addr);
     Ok(())
+
 }

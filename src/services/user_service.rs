@@ -1,10 +1,18 @@
+use env_logger::builder;
+use crate::userProto::SignInResponse;
 use log::{debug, error, log_enabled, info, Level};
-use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, DbErr, ActiveValue::Set, Database, ActiveValue};
+use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, DbErr, ActiveValue::Set, Database, ActiveValue, QueryFilter, QuerySelect, ColumnTrait, QueryTrait, ConnectionTrait, Related, ModelTrait};
 use tonic::{Request, Response, Status};
 use crate::userProto::{UserResponse, CreateUserRequest};
 use crate::userProto::user_service_server::UserService;
 use crate::entities::user as userEntity;
-use crate::generated::user::{DeleteUserRequest, GetUserRequest, UpdateUserRequest};
+use crate::entities::user;
+use crate::entities::user::Entity;
+use crate::generated::user::{DeleteUserRequest, GetUserRequest, UpdateUserRequest, Response as UResponse, SignInRequest, SignOutRequest};
+use crate::generated::user as genuser;
+use crate::entities::RegularToken;
+use crate::entities::RefreshToken;
+use crate::entities::user::Relation::RefreshToken;
 
 #[derive(Debug, Default)]
 pub struct MyUserService {
@@ -29,6 +37,14 @@ impl UserService for MyUserService {
     async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserResponse>, Status> {
         self.get_user(request).await
     }
+
+    async fn sign_in(&self, request: Request<SignInRequest>) -> Result<Response<SignInResponse>, Status> {
+        todo!()
+    }
+
+    async fn sign_out(&self, request: Request<SignOutRequest>) -> Result<Response<UResponse>, Status> {
+        todo!()
+    }
 }
 
 
@@ -47,6 +63,46 @@ impl MyUserService {
 
 
 impl MyUserService {
+    async fn sign_in(&self, request: Request<SignInRequest>) -> Result<Response<SignInResponse>, Status>{
+    let req = request.into_inner();
+        if req.password.is_empty() || req.login_or_email.is_empty() {
+            return Err(Status::internal("Fields cannot be empty"));
+        }
+        let db_conn = match self.get_user_service_db_connection().await {
+            Ok(db) => db,
+            Err(e) => {
+                error!("Error: {:?}", e);
+                return Err(Status::internal("Failed to get db connection"));
+            }
+        };
+
+        let _result =  userEntity::Entity::find()
+            .having(user::Column::Username.eq(req.login_or_email.clone()))
+            .having(user::Column::Password.eq(req.password.clone()))
+            .one(&db_conn).await;
+
+        match _result {
+            Err(e) => {
+                error!("Error: {:?}", e);
+                return Err(Status::internal(format!("Failed to sign in: {}", e)));
+            }
+
+            Ok(Some(user)) => {
+                let _result =  user::Entity::find_related(RefreshToken);
+
+
+
+
+
+
+
+
+
+
+
+       }
+    }
+}
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,

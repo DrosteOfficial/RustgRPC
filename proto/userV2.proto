@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package userV2;
+
+service UserV2Service {
+
+}
+

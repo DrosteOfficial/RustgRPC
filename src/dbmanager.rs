@@ -59,22 +59,22 @@
 // }
 
 
-use sea_orm::{DatabaseConnection, DbErr, EntityTrait, IntoActiveModel};
-use super::entities as Ent;
-use super::entities::user::Entity as User;
-pub async fn insert_user(user: &Ent::user::Model, database_connection: &DatabaseConnection) -> Result<(), DbErr> {
-    let active_user = user.clone().into_active_model();
-
-    let result = User::insert(active_user).exec(database_connection).await;
-
-
-    match result {
-        Ok(_) => {
-            Ok(println!("User inserted"))
-        }
-        Err(e) => Err(e),
-    }
-}
+// use sea_orm::{DatabaseConnection, DbErr, EntityTrait, IntoActiveModel};
+// use super::entities as Ent;
+// use sea_orm_migration::seaql_migrations::Entity as User;
+// pub async fn insert_user(user: &Ent::user::Model, database_connection: &DatabaseConnection) -> Result<(), DbErr> {
+//     let active_user = user.clone().into_active_model();
+//
+//     let result = User::insert(active_user).exec(database_connection).await;
+//
+//
+//     match result {
+//         Ok(_) => {
+//             Ok(println!("User inserted"))
+//         }
+//         Err(e) => Err(e),
+//     }
+// }
 
 
 

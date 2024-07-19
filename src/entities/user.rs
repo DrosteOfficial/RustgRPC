@@ -3,6 +3,8 @@ use sea_orm::{TryGetable, TryGetError, Value};
 use sea_orm::sea_query::{ArrayType, ValueType, ValueTypeErr};
 use serde::{Deserialize, Serialize};
 
+use crate::entities::message;
+
 #[derive(Clone, Debug, Eq, PartialEq, EnumIter, Deserialize, Serialize)]
 pub enum GenderTypes {
     Male = 0,
@@ -81,13 +83,24 @@ impl ValueType for GenderTypes {
     }
 }
 
-#[derive(Copy, Clone, Debug, EnumIter)]
-pub enum Relation {}
+#[derive(Copy, Clone, Debug, EnumIter,DeriveRelation )]
+pub enum Relation {
+    #[sea_orm(has_many = "message::Entity")]
+    Message,
+    #[sea_orm(has_many = "message::Entity")]
+    RegularToken,
+    #[sea_orm(has_many = "message::Entity")]
+    RefreshToken,
+}
 
-impl RelationTrait for Relation {
-    fn def(&self) -> RelationDef {
-        panic!("No relations are defined for Relation")
+
+impl Related<message::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Message.def();
+        Relation::RefreshToken.def();
+        Relation::RegularToken.def()
     }
 }
+
 
 impl ActiveModelBehavior for ActiveModel {}

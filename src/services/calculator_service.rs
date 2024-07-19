@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use log::{debug, error, log_enabled, info, Level};
-use crate::calculator::calculator_server::{Calculator, CalculatorServer};
+use log::{error, log_enabled, info, Level};
+use crate::calculator::calculator_server::{Calculator};
 use crate::calculator::{CalculationRequest, CalculationResponse};
 
 #[derive(Debug, Default)]

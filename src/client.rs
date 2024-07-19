@@ -12,8 +12,6 @@ use crate::generated::messages::messages_client::MessagesClient;
 use crate::generated::pow::pow_client::PowClient;
 use crate::generated::pow::PowRequest;
 
-// #[cfg(feature = "client")]
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

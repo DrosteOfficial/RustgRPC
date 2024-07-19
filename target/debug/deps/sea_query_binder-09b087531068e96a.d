@@ -1,0 +1,10 @@
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\libsea_query_binder-09b087531068e96a.rmeta: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx_mysql.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\values.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx.rs
+
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\libsea_query_binder-09b087531068e96a.rlib: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx_mysql.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\values.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx.rs
+
+C:\Users\powst\RustroverProjects\CalculatorAPI\target\debug\deps\sea_query_binder-09b087531068e96a.d: C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\lib.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx_mysql.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\values.rs C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx.rs
+
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\lib.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx_mysql.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\values.rs:
+C:\Users\powst\.cargo\registry\src\index.crates.io-6f17d22bba15001f\sea-query-binder-0.5.0\src\sqlx.rs:
