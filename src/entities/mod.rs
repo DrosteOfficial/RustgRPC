@@ -1,4 +1,4 @@
-pub mod user;
 pub mod message;
-pub mod RegularToken;
-pub mod RefreshToken;
+pub mod refresh_token;
+pub mod regular_token;
+pub mod user;

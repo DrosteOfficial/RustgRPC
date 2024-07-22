@@ -1,17 +1,15 @@
+use log::{error, info};
 use tonic::{Request, Response, Status};
-use crate::pow::pow_server::{Pow};
+
+use crate::pow::pow_server::Pow;
 use crate::pow::{PowRequest, PowResponse};
-use log::{info, error};
 
 #[derive(Debug, Default)]
 pub struct PowService {}
 
 #[tonic::async_trait]
 impl Pow for PowService {
-    async fn powerfn(
-        &self,
-        request: Request<PowRequest>,
-    ) -> Result<Response<PowResponse>, Status> {
+    async fn powerfn(&self, request: Request<PowRequest>) -> Result<Response<PowResponse>, Status> {
         info!("Received power function request: {:?}", request);
 
         let input = request.get_ref();
@@ -30,9 +28,7 @@ impl Pow for PowService {
                 return Err(Status::out_of_range("Result overflowed"));
             }
             _ => {
-                let response = PowResponse {
-                    result,
-                };
+                let response = PowResponse { result };
                 info!("Returning power function response: {:?}", response);
                 Ok(Response::new(response))
             }

@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
-use sea_orm::{TryGetable, TryGetError, Value};
 use sea_orm::sea_query::{ArrayType, ValueType, ValueTypeErr};
+use sea_orm::{TryGetError, TryGetable, Value};
 use serde::{Deserialize, Serialize};
 
 use crate::entities::message;
@@ -83,7 +83,7 @@ impl ValueType for GenderTypes {
     }
 }
 
-#[derive(Copy, Clone, Debug, EnumIter,DeriveRelation )]
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "message::Entity")]
     Message,
@@ -93,7 +93,6 @@ pub enum Relation {
     RefreshToken,
 }
 
-
 impl Related<message::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Message.def();
@@ -101,6 +100,5 @@ impl Related<message::Entity> for Entity {
         Relation::RegularToken.def()
     }
 }
-
 
 impl ActiveModelBehavior for ActiveModel {}

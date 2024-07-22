@@ -1,70 +1,91 @@
-
-use env_logger::builder;
-use crate::userProto::SignInResponse;
-use jsonwebtoken::{encode, Header};
-use log::{debug, error, log_enabled, info, Level};
-use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, DbErr, ActiveValue::Set, Database, ActiveValue, QuerySelect};
-use tonic::{async_trait, Request, Response, Status};
-use crate::userProto::{UserResponse, CreateUserRequest};
-use crate::userProto::user_service_server::UserService;
-use crate::entities::user as userEntity;
-use crate::entities::user;
-use crate::entities::user::Entity;
-use crate::generated::user::{DeleteUserRequest, GetUserRequest, UpdateUserRequest, Response as UResponse, SignInRequest, SignOutRequest};
-use sea_orm::ColumnTrait;
-use crate::generated::user as genuser;
-use crate::entities::RegularToken;
-use crate::entities::RefreshToken;
-use crate::services::JWTService;
-use sea_orm::QueryFilter;
-use serde::{Deserialize, Serialize};
-use sqlx::types::chrono::{DateTime, Local, Utc};
 use chrono::naive::NaiveDateTime;
 use chrono::NaiveDate;
+use env_logger::builder;
+use jsonwebtoken::{encode, Header};
+use log::{debug, error, info, Level};
+use sea_orm::ColumnTrait;
+use sea_orm::QueryFilter;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ActiveValue::Set, Database, DatabaseConnection, DbErr,
+    EntityTrait, QuerySelect,
+};
+use sea_orm_migration::prelude::SimpleExpr;
+use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Local, Utc};
 use tonic::metadata::MetadataMap;
-use crate::entities::RefreshToken::Column::Token;
-use crate::migrations::migrator::sea_query::ColumnRef::Column;
+use tonic::{async_trait, Request, Response, Status};
+
+use crate::entities::user as userEntity;
+use crate::entities::user;
+use crate::entities::{refresh_token, regular_token};
+use crate::generated::user as genuser;
+use crate::generated::user::{
+    DeleteUserRequest, GetUserRequest, Response as UResponse, SignInRequest, SignOutRequest,
+    UpdateUserRequest,
+};
+use crate::services::jwt_service;
+use crate::services::jwt_service::JWTService;
+use crate::userProto::user_service_server::UserService;
+use crate::userProto::SignInResponse;
+use crate::userProto::{CreateUserRequest, UserResponse};
 
 #[derive(Debug, Default)]
 pub struct MyUserService {
     pub(crate) db: DatabaseConnection,
-    pub(crate)jwt_service: JWTService::JWTService,
+    pub(crate) jwt_service: jwt_service::JWTService,
 }
 
 #[async_trait]
 impl UserService for MyUserService {
-    async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UResponse>, Status> {
-        JWTService::is_token_valid(&request.metadata(), &Default::default()).await;
+    async fn create_user(
+        &self,
+        request: Request<CreateUserRequest>,
+    ) -> Result<Response<UResponse>, Status> {
         self.create_user(request).await
     }
 
-    async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserResponse>, Status> {
+    async fn update_user(
+        &self,
+        request: Request<UpdateUserRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
         self.update_user(request).await
     }
 
-    async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<UserResponse>, Status> {
+    async fn delete_user(
+        &self,
+        request: Request<DeleteUserRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
         self.delete_user(request).await
     }
 
-    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserResponse>, Status> {
+    async fn get_user(
+        &self,
+        request: Request<GetUserRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
         self.get_user(request).await
     }
 
-    async fn sign_in(&self, request: Request<SignInRequest>) -> Result<Response<SignInResponse>, Status> {
+    async fn sign_in(
+        &self,
+        request: Request<SignInRequest>,
+    ) -> Result<Response<SignInResponse>, Status> {
         self.sign_in(request).await
     }
 
-    async fn sign_out(&self, request: Request<SignOutRequest>) -> Result<Response<UResponse>, Status> {
-        todo!()
+    async fn sign_out(
+        &self,
+        _request: Request<SignOutRequest>,
+    ) -> Result<Response<UResponse>, Status> {
+        self.sign_out(_request.metadata().clone(), _request).await
     }
 }
 
-
-
 impl MyUserService {
-    pub fn new_user_service(db: DatabaseConnection, jwt_service:JWTService::JWTService ) -> MyUserService {
-        MyUserService { db, jwt_service}
-
+    pub fn new_user_service(
+        db: DatabaseConnection,
+        jwt_service: jwt_service::JWTService,
+    ) -> MyUserService {
+        MyUserService { db, jwt_service }
     }
 
     async fn get_user_service_db_connection(&self) -> Result<DatabaseConnection, Status> {
@@ -72,38 +93,52 @@ impl MyUserService {
     }
 }
 
-
 impl MyUserService {
+    async fn sign_out(
+        &self,
+        metadata: MetadataMap,
+        _request: Request<SignOutRequest>,
+    ) -> Result<Response<UResponse>, Status> {
+        let db = self.get_user_service_db_connection().await?;
+        let token_value = if let Some(header_value) = metadata.get("authorization") {
+            match header_value.to_str() {
+                Ok(v) => v.to_string(),
+                Err(_) => return Err(Status::invalid_argument("Invalid token format")),
+            }
+        } else {
+            return Err(Status::invalid_argument("Token not found"));
+        };
+        let result = regular_token::Entity::find()
+            .filter(regular_token::Column::Token.eq(token_value))
+            .filter(regular_token::Column::Active.eq(true))
+            .one(&db)
+            .await;
 
-
-    async fn sign_out(&self, request: Request<SignOutRequest>, metadata:MetadataMap) -> Result<Response<UResponse>, Status> {
-        let DB = self.get_user_service_db_connection().await?;
-        let _result = RegularToken::Entity::find()
-            .filter(RegularToken::Column::Token.eq(metadata.clone().into_headers().get("authorization").unwrap().to_str().unwrap()))
-            .one(&DB).await;
-        match _result {
+        match result {
             Ok(Some(token)) => {
-                let _ = RegularToken::Entity::update_many()
-                    .filter(RegularToken::Column::Token.eq(token.token.clone()))
-                    .set(Column::eq(RegularToken::Column::Active.eq(false)))
-                    .set(Column::eq(RegularToken::Column::Expirationtime.eq(Utc::now())))
-                    .exec(&DB).await;
-                match _result.iter().clone() {
-                    Ok(_) => {
-                        Ok(Response::new(UResponse {
-                            status: true,
-                            message: "Successfully signed out".to_string(),
-                        }))
-                    }
+                let update_result = regular_token::Entity::update_many()
+                    .filter(regular_token::Column::Token.eq(token.token.clone()))
+                    .col_expr(regular_token::Column::Active, SimpleExpr::from(false))
+                    .col_expr(regular_token::Column::Expired, SimpleExpr::from(true))
+                    .col_expr(
+                        regular_token::Column::ExpirationTime,
+                        SimpleExpr::from(NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0)),
+                    )
+                    .exec(&db)
+                    .await;
+
+                match update_result {
+                    Ok(_) => Ok(Response::new(UResponse {
+                        status: true,
+                        message: "Successfully signed out".to_string(),
+                    })),
                     Err(e) => {
                         error!("Error: {:?}", e);
                         Err(Status::internal(format!("Failed to sign out: {}", e)))
                     }
                 }
             }
-            Ok(None) => {
-                Err(Status::not_found("Token not found"))
-            }
+            Ok(None) => Err(Status::not_found("Token not found or is already expired")),
             Err(e) => {
                 error!("Error: {:?}", e);
                 Err(Status::internal(format!("Failed to sign out: {}", e)))
@@ -111,8 +146,10 @@ impl MyUserService {
         }
     }
 
-
-    async fn sign_in(&self, request: Request<SignInRequest>) -> Result<Response<SignInResponse>, Status> {
+    async fn sign_in(
+        &self,
+        request: Request<SignInRequest>,
+    ) -> Result<Response<SignInResponse>, Status> {
         let req = request.into_inner();
         if req.password.is_empty() || req.login_or_email.is_empty() {
             return Err(Status::internal("Fields cannot be empty"));
@@ -126,47 +163,87 @@ impl MyUserService {
         };
 
         let user_result = userEntity::Entity::find()
-            .filter(user::Column::Username.eq(req.login_or_email.clone()))
+            .filter(
+                user::Column::Username
+                    .eq(req.login_or_email.clone())
+                    .or(user::Column::Email.eq(req.login_or_email.clone())),
+            )
             .filter(user::Column::Password.eq(req.password.clone()))
-            .one(&db_conn).await;
+            .one(&db_conn)
+            .await;
 
         match user_result {
             Err(e) => {
                 error!("Error: {:?}", e);
                 return Err(Status::internal(format!("Failed to sign in: {}", e)));
-            },
+            }
             Ok(None) => return Err(Status::not_found("User not found")),
             Ok(Some(user)) => {
-                let token_result = RegularToken::Entity::find()
-                    .filter(RegularToken::Column::Id.eq(user.id))
-                    .filter(RegularToken::Column::Active.eq(true))
-                    .one(&db_conn).await;
+                let token_result = regular_token::Entity::find()
+                    .filter(regular_token::Column::UserId.eq(user.id.clone()))
+                    .filter(regular_token::Column::Active.eq(true))
+                    .one(&db_conn)
+                    .await;
 
                 match token_result {
-                    Err(e) => {
-                        let new_jwt = JWTService::generate_jwt(user.clone()).await;
-                        let new_token = RegularToken::ActiveModel {
+                    Err(_e) => {
+                        let new_jwt = jwt_service::generate_jwt(user.clone()).await;
+                        let new_token = regular_token::ActiveModel {
                             id: ActiveValue::NotSet,
-                            userId: sea_orm::Set(user.id),
+                            user_id: Set(user.id.clone()),
                             token: Set(new_jwt.clone()),
                             active: Set(true),
-                            creaitontime: Set(NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0)),
+                            creation_time: Set(NaiveDateTime::from_timestamp(
+                                Utc::now().timestamp(),
+                                0,
+                            )),
                             expired: Set(false),
-                            expirationtime: ActiveValue::NotSet
+                            expiration_time: ActiveValue::NotSet,
                         };
-                        RegularToken::Entity::insert(new_token.clone()).exec(&db_conn).await;
+                        let _token_insert_result = regular_token::Entity::insert(new_token.clone())
+                            .exec(&db_conn)
+                            .await
+                            .map_err(|e| {
+                                error!("Error: {:?}", e);
+                                Status::internal(format!("Failed to Insert JWTtoken: {}", e))
+                            })?;
 
-                        Ok(Response::new(SignInResponse{
+                        Ok(Response::new(SignInResponse {
                             status: true,
                             message: "Successfully signed in :)".to_string(),
                             token: new_token.token.unwrap(),
                         }))
+                    }
+                    Ok(None) => {
+                        let new_jwt = jwt_service::generate_jwt(user.clone()).await;
+                        let new_token = regular_token::ActiveModel {
+                            id: ActiveValue::NotSet,
+                            user_id: Set(user.id.clone()),
+                            token: Set(new_jwt.clone()),
+                            active: Set(true),
+                            creation_time: Set(NaiveDateTime::from_timestamp(
+                                Utc::now().timestamp(),
+                                0,
+                            )),
+                            expired: Set(false),
+                            expiration_time: ActiveValue::NotSet,
+                        };
+                        let _token_insert_result = regular_token::Entity::insert(new_token.clone())
+                            .exec(&db_conn)
+                            .await
+                            .map_err(|e| {
+                                error!("Error: {:?}", e);
+                                Status::internal(format!("Failed to Insert JWTtoken: {}", e))
+                            })?;
 
-
-                    },
-                    Ok(None) => return Err(Status::not_found("Token not found")),
+                        Ok(Response::new(SignInResponse {
+                            status: true,
+                            message: "Successfully signed in :)".to_string(),
+                            token: new_token.token.unwrap(),
+                        }))
+                    }
                     Ok(Some(token)) => {
-                        return Ok(Response::new(SignInResponse{
+                        return Ok(Response::new(SignInResponse {
                             status: true,
                             message: "Successfully signed in :)".to_string(),
                             token: token.token,
@@ -176,16 +253,27 @@ impl MyUserService {
             }
         }
     }
+
     async fn create_user(
         &self,
         request: Request<CreateUserRequest>,
     ) -> Result<Response<UResponse>, Status> {
         let req = request.into_inner();
 
-        if req.username.is_empty() || req.password.is_empty() || req.email.is_empty() || req.gender < 0 || req.gender > 2 {
+        if req.username.is_empty()
+            || req.password.is_empty()
+            || req.email.is_empty()
+            || req.gender < 0
+            || req.gender > 2
+        {
             return Err(Status::internal("Fields cannot be empty"));
         }
 
+        let user_exists = self.user_by_username_exists(req.username.clone()).await?;
+        match user_exists {
+            true => return Err(Status::internal("User already exists")),
+            false => (),
+        }
         let new_user = userEntity::ActiveModel {
             id: ActiveValue::NotSet,
             username: Set(req.username.clone()),
@@ -194,10 +282,11 @@ impl MyUserService {
             gender: Set(req.gender.into()),
         };
 
-
-        let insert_result = userEntity::Entity::insert(new_user.clone()).exec(&self.db).await;
+        let insert_result = userEntity::Entity::insert(new_user.clone())
+            .exec(&self.db)
+            .await;
         match insert_result {
-            Ok(result) => {
+            Ok(_) => {
                 info!("User created");
                 Ok(Response::new(UResponse {
                     status: true,
@@ -205,14 +294,16 @@ impl MyUserService {
                 }))
             }
             Err(e) => {
-                println!("Error: {:?}", e);
+                error!("Error: {:?}", e);
                 if let DbErr::Conn(_) = e {
                     let db_conn = self.get_user_service_db_connection().await?;
-                    let insert_result = userEntity::Entity::insert(new_user.clone()).exec(&db_conn).await;
+                    let insert_result = userEntity::Entity::insert(new_user.clone())
+                        .exec(&db_conn)
+                        .await;
                     match insert_result {
-                        Ok(result) => Ok(Response::new(UResponse {
+                        Ok(_) => Ok(Response::new(UResponse {
                             status: true,
-                            message: "successfully Registered".to_string(),
+                            message: "Successfully Registered".to_string(),
                         })),
                         Err(e) => {
                             error!("Error: {:?}", e);
@@ -220,22 +311,31 @@ impl MyUserService {
                         }
                     }
                 } else {
-                    error!("Error: {:?}", e);
                     Err(Status::internal(format!("Failed to create user: {}", e)))
                 }
             }
         }
     }
 
-    async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserResponse>, Status> {
+    async fn update_user(
+        &self,
+        request: Request<UpdateUserRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
         let req = request.into_inner();
 
-        if req.username.is_empty() || req.password.is_empty() || req.email.is_empty() || req.gender < 0 || req.gender > 2 {
+        if req.username.is_empty()
+            || req.password.is_empty()
+            || req.email.is_empty()
+            || req.gender < 0
+            || req.gender > 2
+        {
             error!("Fields cannot be empty");
             return Err(Status::invalid_argument("Fields cannot be empty"));
         }
 
-        let user_check = self.get_user(Request::new(GetUserRequest { id: req.id })).await;
+        let user_check = self
+            .get_user(Request::new(GetUserRequest { id: req.id }))
+            .await;
         if user_check.is_err() {
             error!("User not found");
             return Err(Status::not_found("User not found"));
@@ -243,9 +343,7 @@ impl MyUserService {
 
         let db_conn = match self.get_user_service_db_connection().await {
             Ok(db) => db,
-            Err(_) => {
-                self.get_user_service_db_connection().await?
-            }
+            Err(_) => self.get_user_service_db_connection().await?,
         };
 
         let updated_user = userEntity::ActiveModel {
@@ -256,7 +354,9 @@ impl MyUserService {
             gender: Set(req.gender.into()),
         };
 
-        let update_result = userEntity::Entity::update(updated_user.clone()).exec(&db_conn).await;
+        let update_result = userEntity::Entity::update(updated_user.clone())
+            .exec(&db_conn)
+            .await;
         match update_result {
             Ok(_) => {
                 info!("User updated");
@@ -268,10 +368,12 @@ impl MyUserService {
                 }))
             }
             Err(e) => {
-                println!("Error: {:?}", e);
+                error!("Error: {:?}", e);
                 if let DbErr::Conn(_) = e {
                     let db_conn = self.get_user_service_db_connection().await?;
-                    let update_result = userEntity::Entity::update(updated_user.clone()).exec(&db_conn).await;
+                    let update_result = userEntity::Entity::update(updated_user.clone())
+                        .exec(&db_conn)
+                        .await;
                     match update_result {
                         Ok(_) => Ok(Response::new(UserResponse {
                             id: req.id,
@@ -279,7 +381,7 @@ impl MyUserService {
                             email: req.email.clone(),
                             status: 1,
                         })),
-                        Err(e) =>{
+                        Err(e) => {
                             error!("Error: {:?}", e);
                             Err(Status::internal(format!("Failed to update user: {}", e)))
                         }
@@ -291,30 +393,36 @@ impl MyUserService {
         }
     }
 
-    async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<UserResponse>, Status> {
+    async fn delete_user(
+        &self,
+        request: Request<DeleteUserRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
         let req = request.into_inner();
-        println!("Request: {:?}", req);
         let db_conn = match self.get_user_service_db_connection().await {
             Ok(db) => db,
-            Err(_) => {
-                self.get_user_service_db_connection().await?
-            }
+            Err(_) => self.get_user_service_db_connection().await?,
         };
 
-        let user_check = self.get_user(Request::new(GetUserRequest { id: req.id })).await;
+        let user_check = self
+            .get_user(Request::new(GetUserRequest { id: req.id }))
+            .await;
         if user_check.is_err() {
             error!("User not found");
             return Err(Status::not_found("User not found"));
         }
 
-        let delete_result = userEntity::Entity::delete_by_id(req.id).exec(&db_conn).await;
+        let delete_result = userEntity::Entity::delete_by_id(req.id)
+            .exec(&db_conn)
+            .await;
         match delete_result {
             Ok(result) => {
                 if result.rows_affected <= 0 {
-                    return Err(Status::internal(format!("Rows affected: {}", result.rows_affected)));
+                    return Err(Status::internal(format!(
+                        "Rows affected: {}",
+                        result.rows_affected
+                    )));
                 }
 
-                println!("User deleted");
                 Ok(Response::new(UserResponse {
                     id: req.id,
                     username: "".to_string(),
@@ -323,10 +431,12 @@ impl MyUserService {
                 }))
             }
             Err(e) => {
-                println!("Error occurred: {:?}", e);
+                error!("Error occurred: {:?}", e);
                 if let DbErr::Conn(_) = e {
                     let db_conn = self.get_user_service_db_connection().await?;
-                    let delete_result = userEntity::Entity::delete_by_id(req.id).exec(&db_conn).await;
+                    let delete_result = userEntity::Entity::delete_by_id(req.id)
+                        .exec(&db_conn)
+                        .await;
                     match delete_result {
                         Ok(_) => Ok(Response::new(UserResponse {
                             id: req.id,
@@ -343,32 +453,58 @@ impl MyUserService {
         }
     }
 
-    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserResponse>, Status> {
-        let req = request.into_inner();
-        println!("Request: {:?}", req);
+    async fn get_user(
+        &self,
+        request: Request<GetUserRequest>,
+    ) -> Result<Response<UserResponse>, Status> {
+        let req = request.into_inner().id.clone();
         let db_conn = match self.get_user_service_db_connection().await {
             Ok(db) => db,
             Err(e) => {
-                println!("Error: {:?}", e);
+                error!("Error: {:?}", e);
                 return Err(Status::internal("Failed to get db connection"));
             }
         };
 
-        let user = userEntity::Entity::find_by_id(req.id).one(&db_conn).await;
+        let user = userEntity::Entity::find_by_id(req).one(&db_conn).await;
         match user {
-            Ok(Some(user)) => {
-                println!("User retrieved");
-                Ok(Response::new(UserResponse {
+            Ok(optional_model) => match optional_model {
+                Some(user) => Ok(Response::new(UserResponse {
                     id: user.id,
                     username: user.username,
                     email: user.email,
                     status: 0,
-                }))
+                })),
+                None => Err(Status::not_found("User not found")),
+            },
+            Err(err) => {
+                info!("Get user Error: {:?}", err);
+                Err(Status::internal(format!("Failed to get user: {}", err)))
             }
-            Ok(None) => Err(Status::not_found("User not found")),
-            Err(e) => { Err(Status::internal(format!("Failed to get user: {}", e))) }
+        }
+    }
+    async fn user_by_username_exists(&self, username: String) -> Result<bool, Status> {
+        let db_conn = match self.get_user_service_db_connection().await {
+            Ok(db) => db,
+            Err(e) => {
+                error!("Error: {:?}", e);
+                return Err(Status::internal("Failed to get db connection"));
+            }
+        };
+
+        let user = userEntity::Entity::find()
+            .filter(user::Column::Username.eq(username.clone()))
+            .one(&db_conn)
+            .await;
+        match user {
+            Ok(optional_model) => match optional_model {
+                Some(_user) => Ok(true),
+                None => Ok(false),
+            },
+            Err(err) => {
+                info!("Get user Error: {:?}", err);
+                Err(Status::internal(format!("Failed to get user: {}", err)))
+            }
         }
     }
 }
-
-

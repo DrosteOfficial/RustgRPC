@@ -1,4 +1,5 @@
 use sea_orm::entity::prelude::*;
+
 use crate::entities::user;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -12,7 +13,7 @@ pub struct Model {
     pub receiver: i32,
     pub timestamp: i64,
 }
-#[derive(Copy, Clone, Debug, EnumIter,DeriveRelation)]
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
         belongs_to = "user::Entity",
@@ -22,12 +23,9 @@ pub enum Relation {
     User,
 }
 
-
-
 impl Related<user::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::User.def()
     }
 }
 impl ActiveModelBehavior for ActiveModel {}
-

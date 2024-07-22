@@ -18,41 +18,25 @@ impl MigrationTrait for CreateMessagesTable {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(Messages::Message)
-                            .string()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(Messages::Sender)
-                            .integer()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(Messages::Receiver)
-                            .integer()
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(Messages::Timestamp)
-                            .big_integer()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Messages::Message).string().not_null())
+                    .col(ColumnDef::new(Messages::Sender).integer().not_null())
+                    .col(ColumnDef::new(Messages::Receiver).integer().not_null())
+                    .col(ColumnDef::new(Messages::Timestamp).big_integer().not_null())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Messages::Table, Messages::Sender)
-                            .to(User::Table, User::id)
+                            .to(Users::Table, Users::Id)
                             .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
                     .foreign_key(
                         ForeignKey::create()
                             .from(Messages::Table, Messages::Receiver)
-                            .to(User::Table, User::id)
+                            .to(Users::Table, Users::Id)
                             .on_delete(ForeignKeyAction::Cascade)
-                            .on_update(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade),
                     )
-                    .to_owned()
+                    .to_owned(),
             )
             .await
     }
@@ -75,12 +59,7 @@ enum Messages {
 }
 #[warn(dead_code)]
 #[derive(Iden)]
-enum User {
+enum Users {
     Table,
-    id,
-    username,
-    password,
-    email,
-    gender
+    Id,
 }
-

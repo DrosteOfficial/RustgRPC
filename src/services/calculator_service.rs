@@ -1,6 +1,7 @@
+use log::{error, info, log_enabled, Level};
 use tonic::{Request, Response, Status};
-use log::{error, log_enabled, info, Level};
-use crate::calculator::calculator_server::{Calculator};
+
+use crate::calculator::calculator_server::Calculator;
 use crate::calculator::{CalculationRequest, CalculationResponse};
 
 #[derive(Debug, Default)]
@@ -12,7 +13,7 @@ impl Calculator for CalculatorService {
         &self,
         request: Request<CalculationRequest>,
     ) -> Result<Response<CalculationResponse>, Status> {
-        error!("Received request: {:?}", request);
+        info!("Received request: {:?}", request);
 
         let input = request.get_ref();
         let response = CalculationResponse {
@@ -22,5 +23,3 @@ impl Calculator for CalculatorService {
         Ok(Response::new(response))
     }
 }
-
-
